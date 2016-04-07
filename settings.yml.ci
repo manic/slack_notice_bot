@@ -1,0 +1,11 @@
+slack_settings:
+  channel_id: 'C0EE923DWRE'
+  channel_name: 'web-team-for-sh'
+  web_team_channel: 'DDRJK20DN'
+  token: 'xoxp-token'
+  members:
+    - 'U0843R' # Gavin
+    - 'U08TE2' # jax.xie
+    - 'U054KR' # Manic
+    - 'U04DNU' # tsw
+    - 'U0843H' # zhusan

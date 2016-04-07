@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# load rvm ruby
+export LC_CTYPE=en_US.UTF-8
+source "${DIR}/ruby_source"
+
+ruby "${DIR}/clean_bot_notice_yesterday.rb"
+echo 'notice done'
