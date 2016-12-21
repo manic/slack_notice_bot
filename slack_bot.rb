@@ -69,16 +69,16 @@ class SlackBot
 
   def reports(user, day: Date.today.prev_day) # U054KRJP5: manic
     report = daily_channels_history(day).select do |msg|
-      msg[:user] == user && 
+      msg[:user] == user &&
         msg[:ts].to_i > day.to_time.to_i &&
-        msg[:text] =~ /^【/
-    end.reverse.map do |msg| 
+        msg[:text] =~ /^\[/
+    end.reverse.map do |msg|
       time = Time.at(msg[:ts].to_i).strftime('%H:%M')
       "[#{time}] #{format_text_for_report(msg[:text])}"
     end.join("\n")
     day_format = day.strftime
     msg = <<MSG
-研發部 #{nickname(user)} #{day_format} 工作日誌
+Engineer #{nickname(user)} #{day_format} work log
 #{report}
 MSG
   end
@@ -105,13 +105,14 @@ MSG
 
   def post(message, channel: channel_id)
     options = { channel: channel, token: token }
-    options.merge!({ username: '動態機器人', text: message })
+    options[:username] = '動態機器人'
+    options[:text] = message
     execute('chat.postMessage', :post, body: options)
   end
 
   def delete(ts)
     options = { channel: channel_id, token: token }
-    options.merge!(ts: ts)
+    options[:ts] = ts
     execute('chat.delete', :post, body: options)
   end
 
@@ -131,15 +132,17 @@ MSG
 
   def cache_data!
     FileUtils.mkdir_p(DATA_DIR)
-    File.write("#{DATA_DIR}/channels_info-#{channel_name}.json", JSON.pretty_generate(JSON.parse(fetch('groups.info'))))
+    info_action = channel_id.start_with?('C') ? 'channels.info' : 'groups.info'
+    File.write("#{DATA_DIR}/channels_info-#{channel_name}.json", JSON.pretty_generate(JSON.parse(fetch(info_action))))
     File.write("#{DATA_DIR}/users_list.json", JSON.pretty_generate(JSON.parse(fetch('users.list'))))
   end
 
   def dump_daily_history!(day = Date.today.prev_day)
     FileUtils.mkdir_p(DATA_DIR)
     oldest = day.to_time.to_i
-    latest = oldest + 86400
-    ret = fetch('channels.history', latest: latest, oldest: oldest, count: 1000)
+    latest = oldest + 86_400
+    history_action = channel_id.start_with?('C') ? 'channels.history' : 'groups.history'
+    ret = fetch(history_action, latest: latest, oldest: oldest, count: 1000)
     messages = JSON.parse(ret, symbolize_names: true)[:messages]
     File.write(history_filename(day), messages.to_json)
   end
@@ -159,7 +162,7 @@ MSG
     dump_daily_history!(day)
     res = File.read(history_filename(day))
     data = JSON.parse(res, symbolize_names: true)
-    data.select { |d| d[:subtype] == 'bot_message' && (d[:text] =~ /沒發動態|尚未上線/ ) }.each { |d| delete(d[:ts]) }
+    data.select { |d| d[:subtype] == 'bot_message' && (d[:text] =~ /沒發動態|尚未上線/) }.each { |d| delete(d[:ts]) }
   end
 
   private
