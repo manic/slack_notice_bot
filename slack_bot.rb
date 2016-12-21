@@ -14,14 +14,15 @@ class SlackBot
   ROOT_DIR = File.dirname(__FILE__)
   DATA_DIR = "#{ROOT_DIR}/_data"
 
-  def initialize
-    cfg = YAML::load(File.open("#{ROOT_DIR}/settings.yml"))
+  def initialize(debug: false)
+    cfg = YAML.load(File.open("#{ROOT_DIR}/settings.yml"))
     settings = cfg['slack_settings']
     @channel_id = settings['channel_id']
     @channel_name = settings['channel_name']
     @token = settings['token']
     @members = settings['members']
     @history = {}
+    @debug = debug
   end
 
   def daily_channels_history(day = Date.today.prev_day)
@@ -58,8 +59,12 @@ class SlackBot
     offline_users_msg = offline_users.map do |user|
       "使用者 <@#{user}> 今日尚未上線"
     end.join("\n")
-    post(away_users_msg + offline_users_msg)
-    # puts(away_users_msg + offline_users_msg)
+
+    if @debug
+      puts(away_users_msg + offline_users_msg)
+    else
+      post(away_users_msg + offline_users_msg)
+    end
   end
 
   def reports(user, day: Date.today.prev_day) # U054KRJP5: manic
@@ -83,8 +88,12 @@ MSG
     msg = members.map do |m|
       reports(m, day: day)
     end.join("-------------\n")
-    #puts msg
-    post(msg, channel: channel)
+
+    if @debug
+      puts msg
+    else
+      post(msg, channel: channel)
+    end
   end
 
   def format_text_for_report(text)
