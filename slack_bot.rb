@@ -27,9 +27,9 @@ class SlackBot
 
   def daily_channels_history(day = Date.today.prev_day)
     @history[day.strftime] ||= begin
-                                 file = "#{DATA_DIR}/channels_history_#{day.strftime}.json"
-                                 dump_daily_history!(day) unless File.exists?(file)
-                                 res = File.read("#{DATA_DIR}/channels_history_#{day.strftime}.json")
+                                 file = history_filename(day)
+                                 dump_daily_history!(day) unless File.exist?(file)
+                                 res = File.read(file)
                                  JSON.parse(res, symbolize_names: true)
                                end
   end
@@ -131,8 +131,8 @@ MSG
 
   def cache_data!
     FileUtils.mkdir_p(DATA_DIR)
-    File.write("#{DATA_DIR}/channels_info.json", fetch('channels.info'))
-    File.write("#{DATA_DIR}/users_list.json", fetch('users.list'))
+    File.write("#{DATA_DIR}/channels_info-#{channel_name}.json", JSON.pretty_generate(JSON.parse(fetch('groups.info'))))
+    File.write("#{DATA_DIR}/users_list.json", JSON.pretty_generate(JSON.parse(fetch('users.list'))))
   end
 
   def dump_daily_history!(day = Date.today.prev_day)
@@ -141,11 +141,11 @@ MSG
     latest = oldest + 86400
     ret = fetch('channels.history', latest: latest, oldest: oldest, count: 1000)
     messages = JSON.parse(ret, symbolize_names: true)[:messages]
-    File.write("#{DATA_DIR}/channels_history_#{day.strftime}.json", messages.to_json)
+    File.write(history_filename(day), messages.to_json)
   end
 
   def channels_info
-    res = File.read("#{DATA_DIR}/channels_info.json")
+    res = File.read("#{DATA_DIR}/channels_info-#{channel_name}.json")
     JSON.parse(res, symbolize_names: true)
   end
 
@@ -157,7 +157,7 @@ MSG
   # 刪除過期的提醒訊息
   def clean_bot_notice(day = Date.today.prev_day)
     dump_daily_history!(day)
-    res = File.read("#{DATA_DIR}/channels_history_#{day.strftime}.json")
+    res = File.read(history_filename(day))
     data = JSON.parse(res, symbolize_names: true)
     data.select { |d| d[:subtype] == 'bot_message' && (d[:text] =~ /沒發動態|尚未上線/ ) }.each { |d| delete(d[:ts]) }
   end
@@ -175,5 +175,9 @@ MSG
 
   def execute(action, method = :get, options = {})
     HTTParty.send(method, url(action), options)
+  end
+
+  def history_filename(day)
+    "#{DATA_DIR}/history-#{channel_name}_#{day.strftime}.json"
   end
 end
