@@ -1,4 +1,5 @@
 # -*- encoding : utf-8 -*-
+# frozen_string_literal: true
 require 'awesome_print'
 require 'json'
 require 'httparty'
@@ -6,10 +7,10 @@ require 'pry'
 require 'yaml'
 
 class SlackBot
+  attr_reader :channel_id, :token, :members, :channel_name
 
-  attr_reader :channel_id, :token, :members, :web_team
-
-  AWAY_LIMIT = 90 * 60 # 90 分鐘
+  AWAY_LIMIT_MINUTES = 90 # 90 分鐘
+  AWAY_LIMIT_SECONDS = AWAY_LIMIT_MINUTES * 60
   ROOT_DIR = File.dirname(__FILE__)
   DATA_DIR = "#{ROOT_DIR}/_data"
 
@@ -17,9 +18,9 @@ class SlackBot
     cfg = YAML::load(File.open("#{ROOT_DIR}/settings.yml"))
     settings = cfg['slack_settings']
     @channel_id = settings['channel_id']
+    @channel_name = settings['channel_name']
     @token = settings['token']
     @members = settings['members']
-    @web_team = settings['web_team_channel']
     @history = {}
   end
 
@@ -47,12 +48,12 @@ class SlackBot
 
   def check_is_away
     now = Time.now.to_i
-    away_users = users_latest_activities.select { |user, act| (now - act[:ts].to_i) > AWAY_LIMIT }
+    away_users = users_latest_activities.select { |_user, act| (now - act[:ts].to_i) > AWAY_LIMIT_SECONDS }
     offline_users = members - users_latest_activities.keys
     return unless away_users.keys.count > 0 || offline_users.count > 0
     away_users_msg = away_users.values.map do |act|
       time = Time.at(act[:ts].to_i).strftime('%Y-%m-%d %H:%M:%S')
-      "使用者 <@#{act[:user]}> 已超過 90 分鐘沒發動態，最後動態時間：#{time}"
+      "使用者 <@#{act[:user]}> 已超過 #{AWAY_LIMIT_MINUTES} 分鐘沒發動態，最後動態時間：#{time}"
     end.join("\n")
     offline_users_msg = offline_users.map do |user|
       "使用者 <@#{user}> 今日尚未上線"
