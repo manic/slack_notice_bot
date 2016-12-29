@@ -51,7 +51,7 @@ class SlackBot
     now = Time.now.to_i
     away_users = users_latest_activities.select { |_user, act| (now - act[:ts].to_i) > AWAY_LIMIT_SECONDS }
     offline_users = members - users_latest_activities.keys
-    return unless away_users.keys.count > 0 || offline_users.count > 0
+    return unless away_users.keys.count.positive? || offline_users.count.positive?
     away_users_msg = away_users.values.map do |act|
       time = Time.at(act[:ts].to_i).strftime('%Y-%m-%d %H:%M:%S')
       "使用者 <@#{act[:user]}> 已超過 #{AWAY_LIMIT_MINUTES} 分鐘沒發動態，最後動態時間：#{time}"
@@ -77,10 +77,7 @@ class SlackBot
       "[#{time}] #{format_text_for_report(msg[:text])}"
     end.join("\n")
     day_format = day.strftime
-    msg = <<MSG
-Engineer #{nickname(user)} #{day_format} work log
-#{report}
-MSG
+    sprintf("Engineer %s %s work log\n%s", nickname(user), day_format, report)
   end
 
   def send_reports(day: Date.today.prev_day, channel: channel_id)
