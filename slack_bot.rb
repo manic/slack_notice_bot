@@ -76,6 +76,7 @@ class SlackBot
       time = Time.at(msg[:ts].to_i).strftime('%H:%M')
       "[#{time}] #{format_text_for_report(msg[:text])}"
     end.join("\n")
+    return nil if report.empty?
     day_format = day.strftime
     sprintf("Engineer %s %s work log\n%s", nickname(user), day_format, report)
   end
@@ -84,12 +85,12 @@ class SlackBot
     dump_daily_history!(day)
     msg = members.map do |m|
       reports(m, day: day)
-    end.join("-------------\n")
+    end.compact.join("\n-------------\n")
 
     if @debug
       puts msg
     else
-      post(msg, channel: channel)
+      post(msg, channel: channel) unless msg.empty?
     end
   end
 
